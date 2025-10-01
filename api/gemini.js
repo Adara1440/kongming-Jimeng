@@ -25,11 +25,10 @@ export default async function handler(req, res) {
     console.error('GEMINI_API_KEY 未設定');
     return res.status(500).json({ 
       error: '未設置 GEMINI_API_KEY',
-      debug: '環境變數未找到'
+      debug: '環境變數未找到',
+      env: Object.keys(process.env).filter(key => key.includes('GEMINI'))
     });
   }
-
-  console.log('API Key 長度:', apiKey.length);
 
   try {
     const response = await fetch(
@@ -56,7 +55,6 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('Gemini API 錯誤:', data);
       return res.status(response.status).json({ 
         error: 'Gemini API 錯誤', 
         details: data,
@@ -66,7 +64,6 @@ export default async function handler(req, res) {
 
     // 檢查回應格式
     if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
-      console.error('回應格式錯誤:', data);
       return res.status(500).json({ 
         error: '回應格式錯誤',
         data: data
@@ -78,11 +75,9 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('詳細錯誤:', error);
     return res.status(500).json({ 
       error: '內部伺服器錯誤',
-      message: error.message,
-      stack: error.stack
+      message: error.message
     });
   }
 }
