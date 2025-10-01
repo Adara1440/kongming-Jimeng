@@ -20,14 +20,8 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   
-  // 調試：檢查 API Key
   if (!apiKey) {
-    console.error('GEMINI_API_KEY 未設定');
-    return res.status(500).json({ 
-      error: '未設置 GEMINI_API_KEY',
-      debug: '環境變數未找到',
-      env: Object.keys(process.env).filter(key => key.includes('GEMINI'))
-    });
+    return res.status(500).json({ error: '未設置 GEMINI_API_KEY' });
   }
 
   try {
@@ -46,35 +40,65 @@ export default async function handler(req, res) {
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 2048,  // 增加到 2048
           },
         })
       }
     );
 
-    const data = await response.json();
-
+    // 先檢查回應是否成功
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API 錯誤:', errorText);
       return res.status(response.status).json({ 
-        error: 'Gemini API 錯誤', 
-        details: data,
-        status: response.status
+        error: 'Gemini API 錯誤',
+        details: errorText
+      });
+    }
+
+    // 嘗試解析 JSON
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      console.error('JSON 解析錯誤:', parseError);
+      const text = await response.text();
+      return res.status(500).json({ 
+        error: 'JSON 解析失敗',
+        raw: text.substring(0, 200) // 只返回前200個字符
       });
     }
 
     // 檢查回應格式
-    if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+    if (!data.candidates || data.candidates.length === 0) {
       return res.status(500).json({ 
-        error: '回應格式錯誤',
+        error: '無效的回應格式',
         data: data
       });
     }
 
+    // 檢查是否有文字內容
+    const candidate = data.candidates[0];
+    if (!candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {
+      return res.status(500).json({ 
+        error: '回應中無內容',
+        candidate: candidate
+      });
+    }
+
+    const text = candidate.content.parts[0].text;
+    if (!text) {
+      return res.status(500).json({ 
+        error: '回應文字為空'
+      });
+    }
+
     return res.status(200).json({ 
-      text: data.candidates[0].content.parts[0].text 
+      text: text
     });
 
   } catch (error) {
+    console.error('伺服器錯誤:', error);
     return res.status(500).json({ 
       error: '內部伺服器錯誤',
       message: error.message
