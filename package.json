@@ -1,0 +1,18 @@
+{
+  "name": "kongming-jimeng",
+  "version": "1.0.0",
+  "main": "index.js",
+"scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Adara1440/kongming-Jimeng.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Adara1440/kongming-Jimeng/issues"
+  },
+  "homepage": "https://github.com/Adara1440/kongming-Jimeng#readme",
+  "description": ""
+}
