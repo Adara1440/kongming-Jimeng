@@ -1,77 +1,49 @@
-﻿export default async function handler(req, res) {
-  // === 基本設定 ===
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+﻿import { GoogleGenerativeAI } from "@google/generative-ai";
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-  const { prompt } = req.body;
-  if (!prompt) return res.status(400).json({ error: 'No prompt provided' });
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
-
+export default async function handler(req, res) {
   try {
-    // === 系統模板：孔明說新聞 ===
-    const systemPrompt = `
-你是「諸葛孔明」，主持節目《孔明說新聞》。
-請用孔明的人設與語氣講述下面這則新聞，用現代白話為主，輕微古風詞彙即可。
-要求：
-1. 保留新聞重點，不偏題。
-2. 以孔明視角分析時事，語氣穩重、機智、有智慧。
-3. 每句 15~25 字，分段輸出，便於短影音字幕使用。
-4. 開頭自報姓名（如「各位朋友 我是孔明」），結尾收以一句智慧哲理。
-請直接生成腳本，不要加任何解釋說明。
+    const { news } = req.body;
+    const { type } = req.query;
 
-以下是新聞內容：
-`;
+    if (!news) return res.status(400).json({ success: false, error: "缺少新聞內容" });
 
-    const finalPrompt = `${systemPrompt}\n${prompt}`;
-
-    // === 呼叫 Gemini API ===
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: finalPrompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 8192
-          }
-        })
+    // 🧩 若是單項請求
+    if (type) {
+      let prompt = "";
+      if (type === "script") {
+        prompt = `請以孔明（諸葛亮）風格，將以下新聞改寫成60秒內短影音旁白腳本。必須包含：開頭吸睛、新聞重點、結尾收斂。用第一人稱孔明語氣。
+新聞內容：${news}`;
+      } else if (type === "scene") {
+        prompt = `根據以下孔明風格腳本內容，生成4個即夢AI組圖提示，角色保持一致，細節描述具象化，融合戰略與未來科技風格：
+${news}`;
+      } else {
+        prompt = `根據以下場景提示，為每個場景生成即夢視頻動作指令，描述鏡頭、角度、動作，符合短影片調性：
+${news}`;
       }
-    );
-
-    const data = await response.json();
-    if (!response.ok) {
-      return res.status(response.status).json({ error: 'API error', details: data });
+      const result = await model.generateContent(prompt);
+      return res.json({ success: true, result: result.response.text() });
     }
 
-    let text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // 🧠 一鍵生成模式
+    const scriptPrompt = `以孔明（諸葛亮）風格撰寫新聞短影音腳本，要求：
+- 精煉傳達新聞重點
+- 用第一人稱孔明語氣與比喻
+新聞內容：${news}`;
+    const script = (await model.generateContent(scriptPrompt)).response.text();
 
-    if (!text) {
-      return res.status(500).json({ error: 'No response text' });
-    }
+    const scenePrompt = `根據以下腳本，生成即夢AI組圖提示，設計4個統一風格場景：
+${script}`;
+    const scene = (await model.generateContent(scenePrompt)).response.text();
 
-    // === 格式清理：移除標點、以空格分句 ===
-    text = text
-      .replace(/[\n\r]+/g, ' ')            // 移除換行
-      .replace(/[，。！？、]/g, ' ')        // 移除標點
-      .replace(/\s+/g, ' ')                 // 多空白合併
-      .trim();
+    const videoPrompt = `根據以下即夢組圖內容，生成對應的視頻鏡頭動作指令（例如：拉近、環繞、俯拍、特寫）：
+${scene}`;
+    const video = (await model.generateContent(videoPrompt)).response.text();
 
-    // 每 20 個字左右加一個空格斷句，便於剪映逐句輸入
-    const formatted = text.replace(/(.{20})/g, '$1 ');
-
-    return res.status(200).json({ text: formatted });
-
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
+    res.json({ success: true, result: { script, scene, video } });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 }

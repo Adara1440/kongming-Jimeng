@@ -1,236 +1,114 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>孔明說新聞 - AI智能生成工具</title>
-
+  <title>孔明說新聞 - AI影片生成工具</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      padding: 20px;
-    }
-
-    .container { max-width: 1400px; margin: 0 auto; }
-    .header { text-align: center; color: white; margin-bottom: 30px; }
-    .header h1 { font-size: 2.5em; margin-bottom: 10px; }
-    .header p { font-size: 1.1em; opacity: 0.9; }
-
-    .api-status {
-      background: white; border-radius: 15px; padding: 15px; margin-bottom: 20px;
-      text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-    .api-status .status-indicator { color: #4caf50; font-weight: bold; }
-
-    .workflow { display: grid; gap: 20px; }
-
-    .step-card {
-      background: white; border-radius: 15px; padding: 25px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-
-    .step-header {
-      display: flex; align-items: center; margin-bottom: 20px;
-      padding-bottom: 15px; border-bottom: 2px solid #f0f0f0;
-    }
-    .step-number {
-      width: 40px; height: 40px; background: linear-gradient(135deg,#667eea,#764ba2);
-      color: white; border-radius: 50%; display: flex; align-items: center;
-      justify-content: center; font-weight: bold; margin-right: 15px;
-    }
-    .step-title { font-size: 1.4em; color: #333; }
-    .step-status { margin-left: auto; padding: 5px 15px; border-radius: 20px; background: #e0e0e0; color: #666; }
-    .step-status.complete { background: #4caf50; color: white; }
-
-    textarea {
-      width: 100%; padding: 15px; border: 2px solid #e0e0e0;
-      border-radius: 10px; font-size: 1em; resize: vertical;
-      background: #f8f9fa; font-family: inherit;
-    }
-    textarea:focus { outline: none; border-color: #667eea; background: white; }
-
-    .editable-textarea { background: #fffef5; min-height: 200px; }
-
-    .btn {
-      padding: 12px 25px; background: linear-gradient(135deg, #667eea, #764ba2);
-      color: white; border: none; border-radius: 8px; font-size: 1em;
-      cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
-      margin-top: 15px; margin-right: 10px;
-    }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .btn.copy-all { background: linear-gradient(135deg, #ff6b6b, #ff5252); }
-    .btn.primary { background: linear-gradient(135deg, #4caf50, #45a049); }
-
-    .prompt-actions {
-      display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;
-    }
-    .copy-btn {
-      background: #4b5563; color: #fff; border: none; padding: 6px 10px;
-      border-radius: 6px; cursor: pointer; font-size: 0.9rem;
-    }
-    .copy-btn:hover { background: #374151; }
-
-    .btn-jimeng, .btn-jianying {
-      text-decoration: none; padding: 6px 10px; border-radius: 6px;
-      color: #fff; font-size: 0.9rem; font-weight: 500;
-    }
-    .btn-jimeng { background: #4f46e5; }
-    .btn-jianying { background: #10b981; }
-    .btn-jimeng:hover, .btn-jianying:hover { opacity: 0.85; }
-
-    .video-command-container {
-      display: grid; grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
-      gap: 15px; margin-top: 20px;
-    }
-    .video-command-item {
-      background: #f0f8ff; padding: 15px; border-radius: 10px;
-      border-left: 4px solid #4ecdc4;
-    }
-    .command-label { font-weight: bold; color: #4ecdc4; margin-bottom: 8px; }
-
+    body { font-family: "Noto Sans TC", sans-serif; background: #201d47; color: #fff; margin: 0; padding: 0; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+    h1 { text-align: center; font-size: 26px; margin-bottom: 20px; }
+    textarea { width: 100%; min-height: 120px; border-radius: 10px; padding: 10px; font-size: 15px; border: none; resize: vertical; }
+    button { background: #22c55e; border: none; color: white; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 15px; margin-top: 10px; }
+    button:hover { background: #16a34a; }
+    .section { background: #2b2865; border-radius: 14px; padding: 20px; margin-bottom: 25px; box-shadow: 0 0 10px rgba(0,0,0,0.4); }
+    .subsection { margin-top: 15px; }
+    .result-box { background: #312f63; padding: 15px; border-radius: 10px; white-space: pre-wrap; min-height: 80px; margin-top: 10px; }
+    .flex { display: flex; gap: 10px; flex-wrap: wrap; }
+    .small-btn { background: #2563eb; }
+    .small-btn:hover { background: #1d4ed8; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <h1>🎭 孔明說新聞 - AI智能生成工具</h1>
-      <p>整合 Gemini AI + 即夢指令，一鍵生成短影音腳本與場景</p>
+    <h1>孔明說新聞 🧠🎬</h1>
+
+    <div class="section">
+      <h2>1️⃣ 輸入新聞來源</h2>
+      <textarea id="newsInput" placeholder="請貼上新聞內容..."></textarea>
+      <button id="generateAll">⚡ 一鍵生成（腳本＋場景＋動作）</button>
     </div>
 
-    <div class="api-status">
-      <div class="status-indicator">✓ 已連接至 Vercel 後端 API</div>
-      <div style="font-size:0.9em;color:#666;">API金鑰安全儲存於伺服器端</div>
+    <div class="section">
+      <h2>2️⃣ 孔明風格短影音腳本</h2>
+      <div id="scriptBox" class="result-box">等待生成...</div>
+      <div class="flex">
+        <button class="small-btn" id="regenScript">🔁 重生腳本</button>
+        <button class="small-btn" id="copyScript">📋 複製腳本</button>
+      </div>
     </div>
 
-    <div class="workflow">
-
-      <!-- step1 -->
-      <div class="step-card">
-        <div class="step-header">
-          <div class="step-number">1</div>
-          <h2 class="step-title">輸入新聞來源</h2>
-          <span class="step-status" id="status1">待輸入</span>
-        </div>
-        <textarea id="newsInput" rows="8" placeholder="請貼上新聞內容..."></textarea>
-        <div>
-          <button class="btn primary" id="generateAllBtn">🚀 一鍵生成（孔明腳本 + 即夢 + 剪映）</button>
-        </div>
+    <div class="section">
+      <h2>3️⃣ 即夢AI組圖提示詞</h2>
+      <div id="sceneBox" class="result-box">等待生成...</div>
+      <div class="flex">
+        <button class="small-btn" id="regenScene">🔁 重生組圖</button>
+        <button class="small-btn" id="copyScene">📋 複製提示詞</button>
+        <button class="small-btn" id="openJimeng">🪄 打開即夢AI</button>
       </div>
+    </div>
 
-      <!-- step2 -->
-      <div class="step-card">
-        <div class="step-header">
-          <div class="step-number">2</div>
-          <h2 class="step-title">孔明風格短影音腳本</h2>
-          <span class="step-status" id="status2">待生成</span>
-        </div>
-        <div id="loading2" style="display:none;">⏳ 生成中...</div>
-        <textarea class="editable-textarea" id="scriptOutput" placeholder="生成後腳本顯示於此..."></textarea>
-        <div class="prompt-actions">
-          <button class="copy-btn" onclick="copyPrompt('scriptOutput')">📋 複製腳本</button>
-        </div>
-      </div>
-
-      <!-- step3 -->
-      <div class="step-card">
-        <div class="step-header">
-          <div class="step-number">3</div>
-          <h2 class="step-title">即夢AI組圖提示詞</h2>
-          <span class="step-status" id="status3">待生成</span>
-        </div>
-        <div class="prompt-block">
-          <textarea id="imagePrompt" class="editable-textarea" placeholder="組圖提示詞生成中..."></textarea>
-          <div class="prompt-actions">
-            <button class="copy-btn" onclick="copyPrompt('imagePrompt')">🔁 複製指令</button>
-            <a href="https://jimeng.jianying.com/ai-tool/home?type=image" target="_blank" class="btn-jimeng">🚀 即夢生圖</a>
-            <a href="https://jimeng.jianying.com/ai-tool/home?type=video" target="_blank" class="btn-jianying">🎬 剪映生成</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- step4 -->
-      <div class="step-card">
-        <div class="step-header">
-          <div class="step-number">4</div>
-          <h2 class="step-title">即夢視頻生成指令</h2>
-          <span class="step-status" id="status4">待生成</span>
-        </div>
-        <div id="videoCommands" class="video-command-container"></div>
+    <div class="section">
+      <h2>4️⃣ 即夢視頻生成指令</h2>
+      <div id="videoBox" class="result-box">等待生成...</div>
+      <div class="flex">
+        <button class="small-btn" id="copyVideo">📋 複製視頻指令</button>
+        <button class="small-btn" id="openJianying">🎞️ 前往剪映專案</button>
       </div>
     </div>
   </div>
 
   <script>
-    // === 工具函式 ===
-    function updateStatus(id, text, done=false){
-      const el = document.getElementById(id);
-      el.textContent = text;
-      el.className = done ? 'step-status complete' : 'step-status';
-    }
-
-    function copyPrompt(id){
-      const el=document.getElementById(id);
-      if(el){navigator.clipboard.writeText(el.value); alert('✅ 已複製！');}
-    }
-
-    async function callGemini(prompt){
-      const res=await fetch('/api/gemini',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({prompt})
+    const apiCall = async (type) => {
+      const news = document.getElementById("newsInput").value.trim();
+      if (!news) return alert("請先輸入新聞內容！");
+      const res = await fetch(`/api/gemini?type=${type}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ news })
       });
-      const data=await res.json();
-      if(!res.ok) throw new Error(data.error||'AI 生成錯誤');
-      return data.text;
-    }
+      const data = await res.json();
+      if (!data.success) return alert("生成失敗，請稍後再試");
+      return data.result;
+    };
 
-    // === 主流程 ===
-    document.getElementById('generateAllBtn').addEventListener('click', async()=>{
-      const news=document.getElementById('newsInput').value.trim();
-      if(!news){alert('請輸入新聞內容！');return;}
+    document.getElementById("generateAll").onclick = async () => {
+      document.getElementById("scriptBox").textContent = "生成中...";
+      document.getElementById("sceneBox").textContent = "生成中...";
+      document.getElementById("videoBox").textContent = "生成中...";
 
-      updateStatus('status1','已輸入',true);
-      updateStatus('status2','生成中...');
-      document.getElementById('loading2').style.display='block';
+      const res = await fetch("/api/gemini", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ news: document.getElementById("newsInput").value })
+      });
 
-      try{
-        // 生成孔明說新聞腳本
-        const script = await callGemini(news);
-        document.getElementById('scriptOutput').value = script;
-        updateStatus('status2','已生成',true);
-        document.getElementById('loading2').style.display='none';
-
-        // 生成即夢組圖提示詞
-        updateStatus('status3','生成中...');
-        const promptImg = await callGemini(`根據以下孔明講稿，生成可用於即夢生圖的提示語：${script}`);
-        document.getElementById('imagePrompt').value = promptImg;
-        updateStatus('status3','已生成',true);
-
-        // 生成視頻動作指令
-        updateStatus('status4','生成中...');
-        const promptVideo = await callGemini(`根據以下講稿，生成4條具體短視頻動作描述：${script}`);
-        const cmds = promptVideo.split(/\n+/).filter(t=>t.trim());
-        document.getElementById('videoCommands').innerHTML = cmds.map((c,i)=>`
-          <div class="video-command-item">
-            <div class="command-label">場景${i+1}</div>
-            <textarea class="editable-textarea" id="vid${i}">${c}</textarea>
-            <div class="prompt-actions">
-              <button class="copy-btn" onclick="copyPrompt('vid${i}')">📋 複製</button>
-              <a href='https://jimeng.jianying.com/ai-tool/home?type=video' target='_blank' class='btn-jianying'>🎬 剪映生成</a>
-            </div>
-          </div>`).join('');
-        updateStatus('status4','已生成',true);
-
-      }catch(err){
-        alert('❌ 發生錯誤: '+err.message);
-        updateStatus('status2','生成失敗');
-        document.getElementById('loading2').style.display='none';
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById("scriptBox").textContent = data.result.script;
+        document.getElementById("sceneBox").textContent = data.result.scene;
+        document.getElementById("videoBox").textContent = data.result.video;
+      } else {
+        alert("生成失敗");
       }
-    });
+    };
+
+    document.getElementById("regenScript").onclick = async () => {
+      document.getElementById("scriptBox").textContent = "重新生成中...";
+      document.getElementById("scriptBox").textContent = await apiCall("script");
+    };
+
+    document.getElementById("regenScene").onclick = async () => {
+      document.getElementById("sceneBox").textContent = "重新生成中...";
+      document.getElementById("sceneBox").textContent = await apiCall("scene");
+    };
+
+    document.getElementById("copyScript").onclick = () => navigator.clipboard.writeText(document.getElementById("scriptBox").textContent);
+    document.getElementById("copyScene").onclick = () => navigator.clipboard.writeText(document.getElementById("sceneBox").textContent);
+    document.getElementById("copyVideo").onclick = () => navigator.clipboard.writeText(document.getElementById("videoBox").textContent);
+
+    document.getElementById("openJimeng").onclick = () => window.open("https://jimeng.jianying.com", "_blank");
+    document.getElementById("openJianying").onclick = () => window.open("https://lv.ulikecam.com", "_blank");
   </script>
 </body>
 </html>
