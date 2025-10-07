@@ -1,64 +1,43 @@
-﻿export default async function handler(req, res) {
-  try {
-    console.log("🔍 Gemini API trigger start");
-    console.log("Environment Key Exists:", !!process.env.GEMINI_API_KEY);
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
-
-    // ...原本程式...
-  } catch (error) {
-    console.error("🔥 Gemini API Error:", error);
-    res.status(500).json({ error: error.message });
-  }
-}
-
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+﻿import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
   try {
-    const { news } = req.body;
-    const { type } = req.query;
-
-    if (!news) return res.status(400).json({ success: false, error: "缺少新聞內容" });
-
-    // 🧩 若是單項請求
-    if (type) {
-      let prompt = "";
-      if (type === "script") {
-        prompt = `請以孔明（諸葛亮）風格，將以下新聞改寫成60秒內短影音旁白腳本。必須包含：開頭吸睛、新聞重點、結尾收斂。用第一人稱孔明語氣。
-新聞內容：${news}`;
-      } else if (type === "scene") {
-        prompt = `根據以下孔明風格腳本內容，生成4個即夢AI組圖提示，角色保持一致，細節描述具象化，融合戰略與未來科技風格：
-${news}`;
-      } else {
-        prompt = `根據以下場景提示，為每個場景生成即夢視頻動作指令，描述鏡頭、角度、動作，符合短影片調性：
-${news}`;
-      }
-      const result = await model.generateContent(prompt);
-      return res.json({ success: true, result: result.response.text() });
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: "Missing prompt" });
     }
 
-    // 🧠 一鍵生成模式
-    const scriptPrompt = `以孔明（諸葛亮）風格撰寫新聞短影音腳本，要求：
-- 精煉傳達新聞重點
-- 用第一人稱孔明語氣與比喻
-新聞內容：${news}`;
-    const script = (await model.generateContent(scriptPrompt)).response.text();
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const scenePrompt = `根據以下腳本，生成即夢AI組圖提示，設計4個統一風格場景：
-${script}`;
-    const scene = (await model.generateContent(scenePrompt)).response.text();
+    // 🧠 核心提示：請求同時生成三種內容（腳本＋組圖＋影片）
+    const fullPrompt = `
+你是一位新聞短影音製作導演，根據以下新聞內容：
+「${prompt}」
 
-    const videoPrompt = `根據以下即夢組圖內容，生成對應的視頻鏡頭動作指令（例如：拉近、環繞、俯拍、特寫）：
-${scene}`;
-    const video = (await model.generateContent(videoPrompt)).response.text();
+請依下列格式依序輸出：
+【1】孔明說新聞短影音腳本：
+（生成簡潔、有節奏感的旁白稿，語氣像是聰明又風趣的軍師孔明）
 
-    res.json({ success: true, result: { script, scene, video } });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+【2】即夢AI組圖提示詞：
+（生成4~6段畫面構想，格式為：主題＋視覺風格＋鏡頭構圖＋氛圍描述，以供AI繪圖使用）
+
+【3】即夢AI影片生成指令：
+（為每張組圖分別產生動態化指令，例如：鏡頭移動、人物動作、轉場效果）
+
+請確保輸出順序與標題完全一致，不要加入額外說明。
+    `;
+
+    const result = await model.generateContent(fullPrompt);
+    const output = result.response.text();
+
+    res.status(200).json({ text: output });
+  } catch (error) {
+    console.error("❌ Gemini API 錯誤：", error);
+    res.status(500).json({ error: error.message });
   }
 }
