@@ -2,7 +2,7 @@
   "name": "kongming-jimeng",
   "version": "1.0.0",
   "main": "index.js",
-"scripts": {},
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Adara1440/kongming-Jimeng.git"
@@ -14,5 +14,8 @@
     "url": "https://github.com/Adara1440/kongming-Jimeng/issues"
   },
   "homepage": "https://github.com/Adara1440/kongming-Jimeng#readme",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1"
+  }
 }
