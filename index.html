@@ -49,7 +49,7 @@
       <div class="flex">
         <button class="small-btn" id="regenScene">🔁 重生組圖</button>
         <button class="small-btn" id="copyScene">📋 複製提示詞</button>
-        <button class="small-btn" id="openJimeng">🪄 打開即夢AI</button>
+        <button class="small-btn" id="openJimeng">🎨 打開即夢生圖</button>
       </div>
     </div>
 
@@ -58,7 +58,7 @@
       <div id="videoBox" class="result-box">等待生成...</div>
       <div class="flex">
         <button class="small-btn" id="copyVideo">📋 複製視頻指令</button>
-        <button class="small-btn" id="openJianying">🎞️ 前往剪映專案</button>
+        <button class="small-btn" id="openJianying">🎬 打開即夢視頻</button>
       </div>
     </div>
   </div>
@@ -229,11 +229,11 @@
 
     // 外部連結
     document.getElementById("openJimeng").onclick = () => {
-      window.open("https://jimeng.jianying.com", "_blank");
+      window.open("https://jimeng.jianying.com/ai-tool/home?type=image", "_blank");
     };
 
     document.getElementById("openJianying").onclick = () => {
-      window.open("https://lv.ulikecam.com", "_blank");
+      window.open("https://jimeng.jianying.com/ai-tool/home?type=video", "_blank");
     };
   </script>
 </body>
