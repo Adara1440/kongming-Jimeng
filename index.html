@@ -13,7 +13,6 @@
     button:hover { background: #16a34a; transform: scale(1.02); }
     button:disabled { background: #6b7280; cursor: not-allowed; transform: none; }
     .section { background: #2b2865; border-radius: 14px; padding: 20px; margin-bottom: 25px; box-shadow: 0 0 10px rgba(0,0,0,0.4); }
-    .subsection { margin-top: 15px; }
     .result-box { background: #312f63; padding: 15px; border-radius: 10px; white-space: pre-wrap; min-height: 80px; margin-top: 10px; line-height: 1.6; }
     .result-box.loading { color: #fbbf24; font-style: italic; }
     .result-box.error { color: #ef4444; }
@@ -22,6 +21,11 @@
     .small-btn:hover { background: #1d4ed8; }
     .toast { position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s; z-index: 1000; }
     .toast.show { opacity: 1; }
+    .video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 15px; }
+    .video-item { background: #3a3673; padding: 12px; border-radius: 8px; }
+    .video-item h4 { margin: 0 0 8px 0; font-size: 14px; color: #fbbf24; }
+    .video-item .content { font-size: 13px; line-height: 1.5; margin-bottom: 8px; white-space: pre-wrap; }
+    .video-item button { width: 100%; font-size: 12px; padding: 6px 10px; }
   </style>
 </head>
 <body>
@@ -54,11 +58,32 @@
     </div>
 
     <div class="section">
-      <h2>4️⃣ 即夢視頻生成指令</h2>
-      <div id="videoBox" class="result-box">等待生成...</div>
-      <div class="flex">
-        <button class="small-btn" id="copyVideo">📋 複製視頻指令</button>
-        <button class="small-btn" id="openJianying">🎬 打開即夢視頻</button>
+      <h2>4️⃣ 即夢視頻生成指令（分 4 段使用）</h2>
+      <div id="videoContainer" class="video-grid">
+        <div class="video-item">
+          <h4>📹 視頻 1</h4>
+          <div id="video1" class="content">等待生成...</div>
+          <button class="small-btn" onclick="copyVideo(1)">📋 複製</button>
+        </div>
+        <div class="video-item">
+          <h4>📹 視頻 2</h4>
+          <div id="video2" class="content">等待生成...</div>
+          <button class="small-btn" onclick="copyVideo(2)">📋 複製</button>
+        </div>
+        <div class="video-item">
+          <h4>📹 視頻 3</h4>
+          <div id="video3" class="content">等待生成...</div>
+          <button class="small-btn" onclick="copyVideo(3)">📋 複製</button>
+        </div>
+        <div class="video-item">
+          <h4>📹 視頻 4</h4>
+          <div id="video4" class="content">等待生成...</div>
+          <button class="small-btn" onclick="copyVideo(4)">📋 複製</button>
+        </div>
+      </div>
+      <div class="flex" style="margin-top: 15px;">
+        <button class="small-btn" id="openJimengVideo">🎬 打開即夢視頻</button>
+        <button class="small-btn" id="openCapcut">✂️ 打開剪映</button>
       </div>
     </div>
   </div>
@@ -72,6 +97,47 @@
       toast.textContent = message;
       toast.classList.add("show");
       setTimeout(() => toast.classList.remove("show"), duration);
+    }
+
+    // 分割視頻指令
+    function splitVideoInstructions(text) {
+      // 嘗試多種分割方式
+      const patterns = [
+        /【視頻\s*[1-4]】/g,
+        /\[視頻\s*[1-4]\]/g,
+        /視頻\s*[1-4][:：]/g,
+        /Scene\s*[1-4]:/gi
+      ];
+
+      let parts = null;
+      for (const pattern of patterns) {
+        const matches = text.split(pattern).filter(p => p.trim());
+        if (matches.length >= 4) {
+          parts = matches.slice(0, 4);
+          break;
+        }
+      }
+
+      // 如果分割失敗，按行數平均分配
+      if (!parts) {
+        const lines = text.split('\n').filter(l => l.trim());
+        const chunkSize = Math.ceil(lines.length / 4);
+        parts = [];
+        for (let i = 0; i < 4; i++) {
+          parts.push(lines.slice(i * chunkSize, (i + 1) * chunkSize).join('\n'));
+        }
+      }
+
+      return parts;
+    }
+
+    // 複製單一視頻指令
+    function copyVideo(num) {
+      const text = document.getElementById(`video${num}`).textContent;
+      if (text && !text.includes("等待") && !text.includes("生成中")) {
+        navigator.clipboard.writeText(text);
+        showToast(`📋 視頻 ${num} 已複製！`);
+      }
     }
 
     // API 調用函數（單一類型）
@@ -118,15 +184,19 @@
       // 設置 loading 狀態
       const scriptBox = document.getElementById("scriptBox");
       const sceneBox = document.getElementById("sceneBox");
-      const videoBox = document.getElementById("videoBox");
       const generateBtn = document.getElementById("generateAll");
 
       scriptBox.textContent = "🔄 生成中...";
       scriptBox.className = "result-box loading";
       sceneBox.textContent = "🔄 生成中...";
       sceneBox.className = "result-box loading";
-      videoBox.textContent = "🔄 生成中...";
-      videoBox.className = "result-box loading";
+      
+      for (let i = 1; i <= 4; i++) {
+        const videoBox = document.getElementById(`video${i}`);
+        videoBox.textContent = "🔄 生成中...";
+        videoBox.className = "content loading";
+      }
+      
       generateBtn.disabled = true;
 
       try {
@@ -148,8 +218,15 @@
           scriptBox.className = "result-box";
           sceneBox.textContent = data.result.scene;
           sceneBox.className = "result-box";
-          videoBox.textContent = data.result.video;
-          videoBox.className = "result-box";
+          
+          // 分割視頻指令到 4 個區塊
+          const videoParts = splitVideoInstructions(data.result.video);
+          for (let i = 0; i < 4; i++) {
+            const videoBox = document.getElementById(`video${i + 1}`);
+            videoBox.textContent = videoParts[i] || "生成失敗";
+            videoBox.className = "content";
+          }
+          
           showToast("✅ 全部內容生成成功！");
         } else {
           throw new Error(data.error || "生成失敗");
@@ -160,8 +237,9 @@
         scriptBox.className = "result-box error";
         sceneBox.textContent = `❌ 生成失敗：${error.message}`;
         sceneBox.className = "result-box error";
-        videoBox.textContent = `❌ 生成失敗：${error.message}`;
-        videoBox.className = "result-box error";
+        for (let i = 1; i <= 4; i++) {
+          document.getElementById(`video${i}`).textContent = `❌ 生成失敗`;
+        }
         alert(`生成失敗：${error.message}`);
       } finally {
         generateBtn.disabled = false;
@@ -219,21 +297,17 @@
       }
     };
 
-    document.getElementById("copyVideo").onclick = () => {
-      const text = document.getElementById("videoBox").textContent;
-      if (text && !text.includes("等待") && !text.includes("生成中")) {
-        navigator.clipboard.writeText(text);
-        showToast("📋 視頻指令已複製到剪貼簿！");
-      }
-    };
-
     // 外部連結
     document.getElementById("openJimeng").onclick = () => {
       window.open("https://jimeng.jianying.com/ai-tool/home?type=image", "_blank");
     };
 
-    document.getElementById("openJianying").onclick = () => {
+    document.getElementById("openJimengVideo").onclick = () => {
       window.open("https://jimeng.jianying.com/ai-tool/home?type=video", "_blank");
+    };
+
+    document.getElementById("openCapcut").onclick = () => {
+      window.open("https://www.capcut.cn/", "_blank");
     };
   </script>
 </body>
