@@ -11,19 +11,16 @@
     "url": "git+https://github.com/Adara1440/kongming-Jimeng.git"
   },
   "keywords": [
-    "Gemini",
+    "OpenAI",
     "即夢",
     "孔明說新聞",
     "Vercel",
-    "Google Generative AI"
+    "GPT"
   ],
   "author": "Adara1440",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/Adara1440/kongming-Jimeng/issues"
   },
-  "homepage": "https://github.com/Adara1440/kongming-Jimeng#readme",
-  "dependencies": {
-    "@google/generative-ai": "^0.24.1"
-  }
+  "homepage": "https://github.com/Adara1440/kongming-Jimeng#readme"
 }
