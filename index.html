@@ -195,7 +195,7 @@
   <div class="container">
     <div class="header">
       <h1>
-        <img src="kongming.png" alt="孔明" class="kongming-icon" onerror="this.style.display='none'">
+        <span class="kongming-icon">👲</span>
         孔明說新聞
       </h1>
     </div>
@@ -216,17 +216,18 @@
     </div>
 
     <div class="section">
-      <h2>🎨 即夢 AI 組圖提示詞</h2>
+      <h2>🎨 即夢 AI 組圖場景（生成 4 張圖）</h2>
       <div id="sceneBox" class="result-box">等待生成...</div>
       <div class="button-row">
         <button class="action-btn" id="regenScene">🔄 重新生成</button>
-        <button class="action-btn success" id="copyScene">📋 複製提示詞</button>
+        <button class="action-btn success" id="copyScene">📋 複製場景描述</button>
         <button class="action-btn" id="openJimeng">🖼️ 打開即夢生圖</button>
       </div>
     </div>
 
     <div class="section">
-      <h2>🎬 即夢視頻指令（分 4 段）</h2>
+      <h2>🎬 視頻運鏡指令（基於上方 4 張圖）</h2>
+      <p style="font-size: 14px; color: #fbbf24; margin-top: 0;">💡 先用上方場景生成 4 張圖，再用下方指令製作視頻</p>
       <div class="video-grid">
         <div class="video-item">
           <h4>📹 視頻 1</h4>
