@@ -9,14 +9,19 @@
     .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
     h1 { text-align: center; font-size: 26px; margin-bottom: 20px; }
     textarea { width: 100%; min-height: 120px; border-radius: 10px; padding: 10px; font-size: 15px; border: none; resize: vertical; }
-    button { background: #22c55e; border: none; color: white; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 15px; margin-top: 10px; }
-    button:hover { background: #16a34a; }
+    button { background: #22c55e; border: none; color: white; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 15px; margin-top: 10px; transition: all 0.3s; }
+    button:hover { background: #16a34a; transform: scale(1.02); }
+    button:disabled { background: #6b7280; cursor: not-allowed; transform: none; }
     .section { background: #2b2865; border-radius: 14px; padding: 20px; margin-bottom: 25px; box-shadow: 0 0 10px rgba(0,0,0,0.4); }
     .subsection { margin-top: 15px; }
-    .result-box { background: #312f63; padding: 15px; border-radius: 10px; white-space: pre-wrap; min-height: 80px; margin-top: 10px; }
+    .result-box { background: #312f63; padding: 15px; border-radius: 10px; white-space: pre-wrap; min-height: 80px; margin-top: 10px; line-height: 1.6; }
+    .result-box.loading { color: #fbbf24; font-style: italic; }
+    .result-box.error { color: #ef4444; }
     .flex { display: flex; gap: 10px; flex-wrap: wrap; }
-    .small-btn { background: #2563eb; }
+    .small-btn { background: #2563eb; font-size: 14px; padding: 8px 14px; }
     .small-btn:hover { background: #1d4ed8; }
+    .toast { position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s; z-index: 1000; }
+    .toast.show { opacity: 1; }
   </style>
 </head>
 <body>
@@ -58,57 +63,178 @@
     </div>
   </div>
 
+  <div id="toast" class="toast"></div>
+
   <script>
-    const apiCall = async (type) => {
+    // Toast 通知函數
+    function showToast(message, duration = 2000) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), duration);
+    }
+
+    // API 調用函數（單一類型）
+    async function apiCall(type) {
       const news = document.getElementById("newsInput").value.trim();
-      if (!news) return alert("請先輸入新聞內容！");
-      const res = await fetch(`/api/gemini?type=${type}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ news })
-      });
-      const data = await res.json();
-      if (!data.success) return alert("生成失敗，請稍後再試");
-      return data.result;
-    };
+      if (!news) {
+        alert("請先輸入新聞內容！");
+        return null;
+      }
 
+      try {
+        const res = await fetch(`/api/gemini?type=${type}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ news })
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || "生成失敗");
+        }
+
+        return data.result;
+      } catch (error) {
+        console.error("API 調用錯誤:", error);
+        alert(`生成失敗：${error.message}`);
+        return null;
+      }
+    }
+
+    // 一鍵生成所有內容
     document.getElementById("generateAll").onclick = async () => {
-      document.getElementById("scriptBox").textContent = "生成中...";
-      document.getElementById("sceneBox").textContent = "生成中...";
-      document.getElementById("videoBox").textContent = "生成中...";
+      const news = document.getElementById("newsInput").value.trim();
+      if (!news) {
+        alert("請先輸入新聞內容！");
+        return;
+      }
 
-      const res = await fetch("/api/gemini", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ news: document.getElementById("newsInput").value })
-      });
+      // 設置 loading 狀態
+      const scriptBox = document.getElementById("scriptBox");
+      const sceneBox = document.getElementById("sceneBox");
+      const videoBox = document.getElementById("videoBox");
+      const generateBtn = document.getElementById("generateAll");
 
-      const data = await res.json();
-      if (data.success) {
-        document.getElementById("scriptBox").textContent = data.result.script;
-        document.getElementById("sceneBox").textContent = data.result.scene;
-        document.getElementById("videoBox").textContent = data.result.video;
-      } else {
-        alert("生成失敗");
+      scriptBox.textContent = "🔄 生成中...";
+      scriptBox.className = "result-box loading";
+      sceneBox.textContent = "🔄 生成中...";
+      sceneBox.className = "result-box loading";
+      videoBox.textContent = "🔄 生成中...";
+      videoBox.className = "result-box loading";
+      generateBtn.disabled = true;
+
+      try {
+        const res = await fetch("/api/gemini?type=all", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ news })
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (data.success && data.result) {
+          scriptBox.textContent = data.result.script;
+          scriptBox.className = "result-box";
+          sceneBox.textContent = data.result.scene;
+          sceneBox.className = "result-box";
+          videoBox.textContent = data.result.video;
+          videoBox.className = "result-box";
+          showToast("✅ 全部內容生成成功！");
+        } else {
+          throw new Error(data.error || "生成失敗");
+        }
+      } catch (error) {
+        console.error("生成錯誤:", error);
+        scriptBox.textContent = `❌ 生成失敗：${error.message}`;
+        scriptBox.className = "result-box error";
+        sceneBox.textContent = `❌ 生成失敗：${error.message}`;
+        sceneBox.className = "result-box error";
+        videoBox.textContent = `❌ 生成失敗：${error.message}`;
+        videoBox.className = "result-box error";
+        alert(`生成失敗：${error.message}`);
+      } finally {
+        generateBtn.disabled = false;
       }
     };
 
+    // 重新生成腳本
     document.getElementById("regenScript").onclick = async () => {
-      document.getElementById("scriptBox").textContent = "重新生成中...";
-      document.getElementById("scriptBox").textContent = await apiCall("script");
+      const scriptBox = document.getElementById("scriptBox");
+      scriptBox.textContent = "🔄 重新生成中...";
+      scriptBox.className = "result-box loading";
+      
+      const result = await apiCall("script");
+      if (result) {
+        scriptBox.textContent = result;
+        scriptBox.className = "result-box";
+        showToast("✅ 腳本重新生成成功！");
+      } else {
+        scriptBox.textContent = "❌ 生成失敗";
+        scriptBox.className = "result-box error";
+      }
     };
 
+    // 重新生成場景
     document.getElementById("regenScene").onclick = async () => {
-      document.getElementById("sceneBox").textContent = "重新生成中...";
-      document.getElementById("sceneBox").textContent = await apiCall("scene");
+      const sceneBox = document.getElementById("sceneBox");
+      sceneBox.textContent = "🔄 重新生成中...";
+      sceneBox.className = "result-box loading";
+      
+      const result = await apiCall("scene");
+      if (result) {
+        sceneBox.textContent = result;
+        sceneBox.className = "result-box";
+        showToast("✅ 場景提示詞重新生成成功！");
+      } else {
+        sceneBox.textContent = "❌ 生成失敗";
+        sceneBox.className = "result-box error";
+      }
     };
 
-    document.getElementById("copyScript").onclick = () => navigator.clipboard.writeText(document.getElementById("scriptBox").textContent);
-    document.getElementById("copyScene").onclick = () => navigator.clipboard.writeText(document.getElementById("sceneBox").textContent);
-    document.getElementById("copyVideo").onclick = () => navigator.clipboard.writeText(document.getElementById("videoBox").textContent);
+    // 複製功能
+    document.getElementById("copyScript").onclick = () => {
+      const text = document.getElementById("scriptBox").textContent;
+      if (text && !text.includes("等待") && !text.includes("生成中")) {
+        navigator.clipboard.writeText(text);
+        showToast("📋 腳本已複製到剪貼簿！");
+      }
+    };
 
-    document.getElementById("openJimeng").onclick = () => window.open("https://jimeng.jianying.com", "_blank");
-    document.getElementById("openJianying").onclick = () => window.open("https://lv.ulikecam.com", "_blank");
+    document.getElementById("copyScene").onclick = () => {
+      const text = document.getElementById("sceneBox").textContent;
+      if (text && !text.includes("等待") && !text.includes("生成中")) {
+        navigator.clipboard.writeText(text);
+        showToast("📋 提示詞已複製到剪貼簿！");
+      }
+    };
+
+    document.getElementById("copyVideo").onclick = () => {
+      const text = document.getElementById("videoBox").textContent;
+      if (text && !text.includes("等待") && !text.includes("生成中")) {
+        navigator.clipboard.writeText(text);
+        showToast("📋 視頻指令已複製到剪貼簿！");
+      }
+    };
+
+    // 外部連結
+    document.getElementById("openJimeng").onclick = () => {
+      window.open("https://jimeng.jianying.com", "_blank");
+    };
+
+    document.getElementById("openJianying").onclick = () => {
+      window.open("https://lv.ulikecam.com", "_blank");
+    };
   </script>
 </body>
 </html>

@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "孔明說新聞 - 二合一正式版（腳本＋即夢組圖＋影片整合＋剪映入口）",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start": "vercel dev"
   },
