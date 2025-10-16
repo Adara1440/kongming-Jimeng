@@ -143,6 +143,12 @@
     .action-btn.success:hover {
       background: #059669;
     }
+    .action-btn.purple {
+      background: #8b5cf6;
+    }
+    .action-btn.purple:hover {
+      background: #7c3aed;
+    }
     .toast { 
       position: fixed; 
       top: 30px; 
@@ -189,6 +195,9 @@
       font-size: 14px; 
       padding: 10px;
     }
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -221,6 +230,7 @@
       <div class="button-row">
         <button class="action-btn" id="regenScene">🔄 重新生成</button>
         <button class="action-btn success" id="copyScene">📋 複製場景描述</button>
+        <button class="action-btn purple" onclick="openSceneDialog()">💬 AI對話優化</button>
         <button class="action-btn" id="openJimeng">🖼️ 打開即夢生圖</button>
       </div>
     </div>
@@ -253,6 +263,50 @@
       <div class="button-row" style="margin-top: 20px;">
         <button class="action-btn" id="openJimengVideo">🎥 打開即夢視頻</button>
         <button class="action-btn" id="openCapcut">✂️ 打開剪映</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 場景優化對話框 -->
+  <div id="sceneDialog" class="hidden" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); z-index: 999; display: flex; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 20px; padding: 30px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+      <h3 style="color: #1e3a8a; font-size: 24px; margin: 0 0 20px 0; display: flex; align-items: center; gap: 10px;">
+        <span>🎬</span> AI 對話優化場景
+      </h3>
+      
+      <div style="margin-bottom: 20px;">
+        <label style="color: #4b5563; font-size: 14px; display: block; margin-bottom: 8px;">
+          告訴 AI 你想怎麼調整場景：
+        </label>
+        <textarea id="sceneAdjustInput" style="width: 100%; min-height: 120px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #1f2937; box-sizing: border-box; font-family: inherit;" 
+          placeholder="範例：
+- 場景1改成孔明在AI實驗室
+- 場景2的螢幕要顯示新聞圖片
+- 場景3加入數據圖表
+- 整體要更現代科技感"></textarea>
+      </div>
+      
+      <div style="margin-bottom: 20px;">
+        <label style="color: #4b5563; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" id="hasNewsImageDialog" style="width: 18px; height: 18px;">
+          <span style="font-size: 14px;">我有新聞圖片要融入場景中</span>
+        </label>
+      </div>
+      
+      <div style="margin-bottom: 20px;">
+        <label style="color: #4b5563; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" id="regenerateVideoCheck" checked style="width: 18px; height: 18px;">
+          <span style="font-size: 14px;">同步更新視頻運鏡指令</span>
+        </label>
+      </div>
+      
+      <div style="display: flex; gap: 12px;">
+        <button onclick="refineScenes()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 500; flex: 1;">
+          🔄 優化場景
+        </button>
+        <button onclick="closeSceneDialog()" style="background: #e5e7eb; color: #4b5563; padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 500; flex: 1;">
+          取消
+        </button>
       </div>
     </div>
   </div>
@@ -303,6 +357,84 @@
       }
     }
 
+    // 對話優化功能
+    function openSceneDialog() {
+      document.getElementById('sceneDialog').classList.remove('hidden');
+    }
+
+    function closeSceneDialog() {
+      document.getElementById('sceneDialog').classList.add('hidden');
+      document.getElementById('sceneAdjustInput').value = '';
+    }
+
+    async function refineScenes() {
+      const adjustment = document.getElementById('sceneAdjustInput').value.trim();
+      const currentScenes = document.getElementById('sceneBox').textContent;
+      const hasNewsImage = document.getElementById('hasNewsImageDialog').checked;
+      const regenerateVideo = document.getElementById('regenerateVideoCheck').checked;
+      const originalNews = document.getElementById('newsInput').value.trim();
+
+      if (!adjustment) {
+        alert('請輸入調整需求！');
+        return;
+      }
+
+      if (!originalNews) {
+        alert('請先輸入新聞內容！');
+        return;
+      }
+
+      const sceneBox = document.getElementById('sceneBox');
+      sceneBox.textContent = '🔄 優化中...';
+      sceneBox.className = 'result-box loading';
+
+      try {
+        const res = await fetch('/api/gemini/refine', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            currentScenes: currentScenes,
+            userRequest: adjustment,
+            originalNews: originalNews,
+            hasNewsImage: hasNewsImage,
+            regenerateVideo: regenerateVideo
+          })
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        
+        if (data.success) {
+          sceneBox.textContent = data.scenes;
+          sceneBox.className = 'result-box';
+          
+          // 如果有更新視頻運鏡
+          if (data.video) {
+            const videoParts = splitVideoInstructions(data.video);
+            for (let i = 0; i < 4; i++) {
+              document.getElementById(`video${i + 1}`).textContent = videoParts[i] || "生成失敗";
+            }
+            showToast('✅ 場景與運鏡已同步優化！');
+          } else {
+            showToast('✅ 場景已優化！');
+          }
+          
+          closeSceneDialog();
+        } else {
+          throw new Error(data.error || '優化失敗');
+        }
+      } catch (error) {
+        console.error('優化錯誤:', error);
+        sceneBox.textContent = `❌ 優化失敗：${error.message}`;
+        sceneBox.className = 'result-box error';
+        alert(`優化失敗：${error.message}`);
+      }
+    }
+
     async function apiCall(type) {
       const news = document.getElementById("newsInput").value.trim();
       if (!news) {
@@ -335,7 +467,10 @@
       }
     }
 
+    // 修改一鍵生成功能
     document.getElementById("generateAll").onclick = async () => {
+      const hasImage = confirm('您是否有新聞相關圖片要融入場景？\n\n點擊「確定」= 有圖片\n點擊「取消」= 沒有圖片（AI自動生成視覺）');
+      
       const news = document.getElementById("newsInput").value.trim();
       if (!news) {
         alert("請先輸入新聞內容！");
@@ -360,7 +495,10 @@
         const res = await fetch("/api/gemini?type=all", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ news })
+          body: JSON.stringify({ 
+            news: news,
+            hasNewsImage: hasImage 
+          })
         });
 
         if (!res.ok) {
@@ -409,17 +547,45 @@
     };
 
     document.getElementById("regenScene").onclick = async () => {
+      const hasImage = confirm('您是否有新聞相關圖片要融入場景？\n\n點擊「確定」= 有圖片\n點擊「取消」= 沒有圖片');
       const sceneBox = document.getElementById("sceneBox");
       sceneBox.textContent = "🔄 重新生成中...";
       sceneBox.className = "result-box loading";
       
-      const result = await apiCall("scene");
-      if (result) {
-        sceneBox.textContent = result;
+      const news = document.getElementById("newsInput").value.trim();
+      if (!news) {
+        alert("請先輸入新聞內容！");
+        sceneBox.textContent = "等待生成...";
         sceneBox.className = "result-box";
-        showToast("✅ 場景已重新生成！");
-      } else {
-        sceneBox.textContent = "❌ 生成失敗";
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/gemini?type=scene", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            news: news,
+            hasNewsImage: hasImage 
+          })
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (data.success) {
+          sceneBox.textContent = data.result;
+          sceneBox.className = "result-box";
+          showToast("✅ 場景已重新生成！");
+        } else {
+          throw new Error(data.error || "生成失敗");
+        }
+      } catch (error) {
+        console.error("API 錯誤:", error);
+        sceneBox.textContent = `❌ 生成失敗：${error.message}`;
         sceneBox.className = "result-box error";
       }
     };
