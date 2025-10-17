@@ -198,6 +198,23 @@
     .hidden {
       display: none !important;
     }
+    .modal-dialog {
+      position: fixed;
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      cursor: move;
+      user-select: none;
+    }
+    .modal-content {
+      cursor: default;
+      user-select: text;
+    }
   </style>
 </head>
 <body>
@@ -269,44 +286,46 @@
 
   <!-- 場景優化對話框 -->
   <div id="sceneDialog" class="hidden" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); z-index: 999; display: flex; align-items: center; justify-content: center;">
-    <div style="background: white; border-radius: 20px; padding: 30px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
-      <h3 style="color: #1e3a8a; font-size: 24px; margin: 0 0 20px 0; display: flex; align-items: center; gap: 10px;">
-        <span>🎬</span> AI 對話優化場景
-      </h3>
-      
-      <div style="margin-bottom: 20px;">
-        <label style="color: #4b5563; font-size: 14px; display: block; margin-bottom: 8px;">
-          告訴 AI 你想怎麼調整場景：
-        </label>
-        <textarea id="sceneAdjustInput" style="width: 100%; min-height: 120px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #1f2937; box-sizing: border-box; font-family: inherit;" 
-          placeholder="範例：
+    <div id="modalBox" class="modal-dialog" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+      <div class="modal-content">
+        <h3 style="color: #1e3a8a; font-size: 24px; margin: 0 0 20px 0; display: flex; align-items: center; gap: 10px; cursor: move;" id="modalHeader">
+          <span>🎬</span> AI 對話優化場景
+        </h3>
+        
+        <div style="margin-bottom: 20px;">
+          <label style="color: #4b5563; font-size: 14px; display: block; margin-bottom: 8px;">
+            告訴 AI 你想怎麼調整場景：
+          </label>
+          <textarea id="sceneAdjustInput" style="width: 100%; min-height: 120px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #1f2937; box-sizing: border-box; font-family: inherit;" 
+            placeholder="範例：
 - 場景1改成孔明在AI實驗室
 - 場景2的螢幕要顯示新聞圖片
 - 場景3加入數據圖表
 - 整體要更現代科技感"></textarea>
-      </div>
-      
-      <div style="margin-bottom: 20px;">
-        <label style="color: #4b5563; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-          <input type="checkbox" id="hasNewsImageDialog" style="width: 18px; height: 18px;">
-          <span style="font-size: 14px;">我有新聞圖片要融入場景中</span>
-        </label>
-      </div>
-      
-      <div style="margin-bottom: 20px;">
-        <label style="color: #4b5563; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-          <input type="checkbox" id="regenerateVideoCheck" checked style="width: 18px; height: 18px;">
-          <span style="font-size: 14px;">同步更新視頻運鏡指令</span>
-        </label>
-      </div>
-      
-      <div style="display: flex; gap: 12px;">
-        <button onclick="refineScenes()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 500; flex: 1;">
-          🔄 優化場景
-        </button>
-        <button onclick="closeSceneDialog()" style="background: #e5e7eb; color: #4b5563; padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 500; flex: 1;">
-          取消
-        </button>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <label style="color: #4b5563; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="hasNewsImageDialog" style="width: 18px; height: 18px;">
+            <span style="font-size: 14px;">我有新聞圖片要融入場景中</span>
+          </label>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <label style="color: #4b5563; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="regenerateVideoCheck" checked style="width: 18px; height: 18px;">
+            <span style="font-size: 14px;">同步更新視頻運鏡指令</span>
+          </label>
+        </div>
+        
+        <div style="display: flex; gap: 12px;">
+          <button onclick="refineScenes()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 500; flex: 1;">
+            🔄 優化場景
+          </button>
+          <button onclick="closeSceneDialog()" style="background: #e5e7eb; color: #4b5563; padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 500; flex: 1;">
+            取消
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -365,6 +384,9 @@
     function closeSceneDialog() {
       document.getElementById('sceneDialog').classList.add('hidden');
       document.getElementById('sceneAdjustInput').value = '';
+      // 重置位置
+      const modalBox = document.getElementById("modalBox");
+      modalBox.style.transform = 'translate(-50%, -50%)';
     }
 
     async function refineScenes() {
@@ -389,7 +411,7 @@
       sceneBox.className = 'result-box loading';
 
       try {
-        const res = await fetch('/api/gemini/refine', {
+        const res = await fetch('/api/gemini?type=refine', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
@@ -412,7 +434,6 @@
           sceneBox.textContent = data.scenes;
           sceneBox.className = 'result-box';
           
-          // 如果有更新視頻運鏡
           if (data.video) {
             const videoParts = splitVideoInstructions(data.video);
             for (let i = 0; i < 4; i++) {
@@ -467,7 +488,6 @@
       }
     }
 
-    // 修改一鍵生成功能
     document.getElementById("generateAll").onclick = async () => {
       const hasImage = confirm('您是否有新聞相關圖片要融入場景？\n\n點擊「確定」= 有圖片\n點擊「取消」= 沒有圖片（AI自動生成視覺）');
       
@@ -617,6 +637,55 @@
     document.getElementById("openCapcut").onclick = () => {
       window.open("https://www.capcut.cn/", "_blank");
     };
+
+    // 拖動功能
+    (function() {
+      let isDragging = false;
+      let currentX;
+      let currentY;
+      let initialX;
+      let initialY;
+      let xOffset = 0;
+      let yOffset = 0;
+
+      const modalBox = document.getElementById("modalBox");
+      const modalHeader = document.getElementById("modalHeader");
+
+      if (modalHeader) {
+        modalHeader.addEventListener("mousedown", dragStart);
+        document.addEventListener("mouseup", dragEnd);
+        document.addEventListener("mousemove", drag);
+      }
+
+      function dragStart(e) {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+
+        if (e.target.id === "modalHeader" || e.target.parentElement.id === "modalHeader") {
+          isDragging = true;
+        }
+      }
+
+      function dragEnd(e) {
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
+      }
+
+      function drag(e) {
+        if (isDragging) {
+          e.preventDefault();
+          currentX = e.clientX - initialX;
+          currentY = e.clientY - initialY;
+          xOffset = currentX;
+          yOffset = currentY;
+
+          modalBox.style.transform = `translate(${currentX}px, ${currentY}px)`;
+          modalBox.style.left = '50%';
+          modalBox.style.top = '50%';
+        }
+      }
+    })();
   </script>
 </body>
 </html>
