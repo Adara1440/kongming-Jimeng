@@ -78,18 +78,27 @@ ${imageInstruction}
 請生成4個場景：`;
   },
 
-  video: (news) => `為已生成的 4 個場景圖設計對應的視頻運鏡指令。
+  video: (scenes, news) => `為以下 4 個場景圖設計對應的視頻運鏡指令。
 
-新聞：${news}
+場景描述：
+${scenes}
+
+新聞背景：${news}
+
+【重要】運鏡必須完全基於場景描述的內容，不要加入場景中沒有的元素！
 
 要求：
-1. 每個指令 60-80 字
-2. 基於場景圖的已有元素設計運鏡
+1. 每個運鏡指令 60-80 字
+2. 必須對應各自場景的實際內容
 3. 運鏡類型：推進/拉遠/橫移/環繞
 4. 每段 10-15 秒
-5. 不要提及任何文字或字幕元素
+5. 如果場景提到警察局就要拍警察局，提到實驗室就要拍實驗室
 
-請輸出 4 個視頻運鏡指令，格式為【視頻N】描述：`,
+輸出格式：
+【視頻1】對應場景1的運鏡...
+【視頻2】對應場景2的運鏡...
+【視頻3】對應場景3的運鏡...
+【視頻4】對應場景4的運鏡...`,
 
   refineScene: (currentScenes, userRequest, news, hasNewsImage) => {
     const imageNote = hasNewsImage ? 
@@ -207,9 +216,12 @@ module.exports = async function handler(req, res) {
         scenes: sceneTips + refinedScenes
       };
 
-      // 如果需要同步更新視頻運鏡
+      // 如果需要同步更新視頻運鏡，基於新場景生成
       if (regenerateVideo) {
-        const newVideo = await callOpenAI(apiKey, PROMPTS.video(originalNews));
+        const newVideo = await callOpenAI(
+          apiKey, 
+          PROMPTS.video(refinedScenes, originalNews)
+        );
         result.video = newVideo;
       }
 
@@ -220,6 +232,7 @@ module.exports = async function handler(req, res) {
     const newsContent = body.news;
     const requestType = req.query.type || "all";
     const hasNewsImage = body.hasNewsImage || false;
+    const currentScenes = body.currentScenes || "";
 
     if (!newsContent || newsContent.trim() === "") {
       return res.status(400).json({ 
@@ -231,11 +244,13 @@ module.exports = async function handler(req, res) {
     console.log(`Generating: ${requestType}, Has image: ${hasNewsImage}`);
 
     if (requestType === "all") {
-      const [scriptRaw, sceneRaw, videoRaw] = await Promise.all([
+      const [scriptRaw, sceneRaw] = await Promise.all([
         callOpenAI(apiKey, PROMPTS.script(newsContent)),
-        callOpenAI(apiKey, PROMPTS.scene(newsContent, hasNewsImage)),
-        callOpenAI(apiKey, PROMPTS.video(newsContent))
+        callOpenAI(apiKey, PROMPTS.scene(newsContent, hasNewsImage))
       ]);
+
+      // 基於場景生成視頻運鏡
+      const videoRaw = await callOpenAI(apiKey, PROMPTS.video(sceneRaw, newsContent));
 
       const sceneTips = hasNewsImage ? 
         `💡 即夢AI操作提示：
@@ -261,7 +276,27 @@ module.exports = async function handler(req, res) {
           video: videoRaw 
         }
       });
-    } else {
+    } 
+    // 處理單獨生成視頻運鏡
+    else if (requestType === "video") {
+      if (!currentScenes) {
+        return res.status(400).json({
+          success: false,
+          error: "需要場景描述才能生成運鏡"
+        });
+      }
+      
+      const videoRaw = await callOpenAI(
+        apiKey, 
+        PROMPTS.video(currentScenes, newsContent)
+      );
+      
+      return res.status(200).json({
+        success: true,
+        result: videoRaw
+      });
+    }
+    else {
       const prompt = PROMPTS[requestType];
       if (!prompt) {
         return res.status(400).json({ 
