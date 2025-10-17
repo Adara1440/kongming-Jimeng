@@ -278,6 +278,7 @@
         </div>
       </div>
       <div class="button-row" style="margin-top: 20px;">
+        <button class="action-btn" onclick="regenerateVideos()">🔄 根據場景重新生成運鏡</button>
         <button class="action-btn" id="openJimengVideo">🎥 打開即夢視頻</button>
         <button class="action-btn" id="openCapcut">✂️ 打開剪映</button>
       </div>
@@ -453,6 +454,52 @@
         sceneBox.textContent = `❌ 優化失敗：${error.message}`;
         sceneBox.className = 'result-box error';
         alert(`優化失敗：${error.message}`);
+      }
+    }
+
+    // 新增：根據場景重新生成視頻運鏡
+    async function regenerateVideos() {
+      const scenes = document.getElementById('sceneBox').textContent;
+      const news = document.getElementById('newsInput').value.trim();
+      
+      if (!scenes || scenes.includes('等待') || !news) {
+        alert('請先生成場景！');
+        return;
+      }
+      
+      for (let i = 1; i <= 4; i++) {
+        document.getElementById(`video${i}`).textContent = "🔄 重新生成中...";
+      }
+      
+      try {
+        const res = await fetch('/api/gemini?type=video', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            news: news,
+            currentScenes: scenes
+          })
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'HTTP error');
+        }
+        
+        const data = await res.json();
+        if (data.success) {
+          const videoParts = splitVideoInstructions(data.result);
+          for (let i = 0; i < 4; i++) {
+            document.getElementById(`video${i + 1}`).textContent = videoParts[i] || "生成失敗";
+          }
+          showToast('✅ 視頻運鏡已根據場景更新！');
+        }
+      } catch (error) {
+        console.error('錯誤:', error);
+        for (let i = 1; i <= 4; i++) {
+          document.getElementById(`video${i}`).textContent = "❌ 生成失敗";
+        }
+        alert('視頻運鏡生成失敗：' + error.message);
       }
     }
 
