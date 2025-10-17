@@ -57,15 +57,22 @@ ${news}
 
 ${imageInstruction}
 
+【重要規則】
+- 場景描述只需要純視覺畫面，不要有任何文字、標題、字幕
+- 避免出現文字看板、標語、螢幕文字（除非是模糊背景）
+- 重點在人物動作、環境氛圍、視覺構圖
+- 如需展示數據，用「圖表」「曲線」「視覺化圖形」而非文字
+
 場景設計原則：
 1. 孔明在【現代場景】評論新聞（不是古代場景）
 2. 每個場景 50-70 字，超級具體
 3. 必須能看出這是什麼新聞（要有辨識度）
+4. 純視覺描述，避免任何需要後製修改的文字元素
 
 必須包含的結構：
 【場景1】開場：孔明發現新聞的驚訝反應，現代新聞室/戰情室
-【場景2】展示：大螢幕/投影必須顯示新聞核心畫面或圖片
-【場景3】分析：孔明在數據圖表前解說，融入新聞關鍵視覺
+【場景2】展示：大螢幕/投影顯示新聞核心畫面或圖片（純畫面無文字）
+【場景3】分析：孔明在數據圖表前解說，用視覺化圖形呈現
 【場景4】結論：孔明對鏡頭給建議，背景呼應新聞主題
 
 請生成4個場景：`;
@@ -80,6 +87,7 @@ ${imageInstruction}
 2. 基於場景圖的已有元素設計運鏡
 3. 運鏡類型：推進/拉遠/橫移/環繞
 4. 每段 10-15 秒
+5. 不要提及任何文字或字幕元素
 
 請輸出 4 個視頻運鏡指令，格式為【視頻N】描述：`,
 
@@ -99,6 +107,12 @@ ${currentScenes}
 ${userRequest}
 
 ${imageNote}
+
+【重要規則】
+- 場景描述只需要純視覺畫面，不要有任何文字、標題、字幕
+- 避免出現文字看板、標語、螢幕文字
+- 重點在人物動作、環境氛圍、視覺構圖
+- 如需展示數據，用「圖表」「曲線」「視覺化圖形」而非文字
 
 請根據用戶要求重新生成優化後的4個場景。保持原有風格但融入用戶的調整要求。
 如果用戶提到特定場景號碼，重點調整該場景。
@@ -136,23 +150,35 @@ async function callOpenAI(apiKey, prompt) {
 }
 
 module.exports = async function handler(req, res) {
-  // 處理場景優化請求
-  if (req.url === '/api/gemini/refine' || req.url.includes('/refine')) {
-    try {
-      if (req.method !== "POST") {
-        return res.status(405).json({ error: "Method Not Allowed" });
-      }
+  try {
+    // 檢查是否為 refine 請求
+    const isRefineRequest = req.query.type === 'refine';
+    
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method Not Allowed" });
+    }
 
-      const apiKey = process.env.OPENAI_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ 
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error("OPENAI_API_KEY missing");
+      return res.status(500).json({ 
+        success: false,
+        error: "Missing OPENAI_API_KEY" 
+      });
+    }
+
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    
+    // 處理場景優化請求
+    if (isRefineRequest) {
+      const { currentScenes, userRequest, originalNews, hasNewsImage, regenerateVideo } = body;
+
+      if (!currentScenes || !userRequest || !originalNews) {
+        return res.status(400).json({
           success: false,
-          error: "Missing OPENAI_API_KEY" 
+          error: "Missing required fields for refine"
         });
       }
-
-      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-      const { currentScenes, userRequest, originalNews, hasNewsImage, regenerateVideo } = body;
 
       // 生成優化後的場景
       const refinedScenes = await callOpenAI(
@@ -166,11 +192,13 @@ module.exports = async function handler(req, res) {
 1. 上傳孔明參考圖作為「角色參考」
 2. 上傳新聞圖片作為「場景參考」
 3. 生成參數：16:9橫版、3D插畫風格
+4. 避免生成文字元素
 
 ` : 
         `💡 即夢AI操作提示：
 1. 上傳孔明參考圖作為「角色參考」
 2. 生成參數：16:9橫版、3D插畫風格
+3. 避免生成文字元素
 
 `;
 
@@ -186,44 +214,12 @@ module.exports = async function handler(req, res) {
       }
 
       return res.status(200).json(result);
-
-    } catch (err) {
-      console.error("Refine error:", err);
-      return res.status(500).json({
-        success: false,
-        error: err.message || "優化失敗"
-      });
-    }
-  }
-
-  // 原有的生成邏輯
-  try {
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method Not Allowed" });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.error("OPENAI_API_KEY missing");
-      return res.status(500).json({ 
-        success: false,
-        error: "Missing OPENAI_API_KEY" 
-      });
-    }
-
-    let newsContent, requestType, hasNewsImage;
-    try {
-      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-      newsContent = body.news;
-      requestType = req.query.type || "all";
-      hasNewsImage = body.hasNewsImage || false;
-    } catch (e) {
-      console.error("Invalid JSON body");
-      return res.status(400).json({ 
-        success: false,
-        error: "Invalid JSON body" 
-      });
-    }
+    // 原有的生成邏輯
+    const newsContent = body.news;
+    const requestType = req.query.type || "all";
+    const hasNewsImage = body.hasNewsImage || false;
 
     if (!newsContent || newsContent.trim() === "") {
       return res.status(400).json({ 
@@ -246,12 +242,14 @@ module.exports = async function handler(req, res) {
 1. 上傳孔明參考圖作為「角色參考」
 2. 上傳新聞圖片作為「場景參考」（場景2、3會自動融入）
 3. 生成參數：16:9橫版、3D插畫風格
+4. 場景設計已避免文字元素
 
 ` : 
         `💡 即夢AI操作提示：
 1. 上傳孔明參考圖作為「角色參考」
 2. 生成參數：16:9橫版、3D插畫風格
 3. AI已根據新聞內容設計視覺元素
+4. 場景設計已避免文字元素
 
 `;
 
@@ -284,11 +282,13 @@ module.exports = async function handler(req, res) {
 1. 上傳孔明參考圖作為「角色參考」
 2. 上傳新聞圖片作為「場景參考」
 3. 生成參數：16:9橫版、3D插畫風格
+4. 場景設計已避免文字元素
 
 ` :
           `💡 即夢AI操作提示：
 1. 上傳孔明參考圖作為「角色參考」
 2. 生成參數：16:9橫版、3D插畫風格
+3. 場景設計已避免文字元素
 
 `;
         text = sceneTips + text;
