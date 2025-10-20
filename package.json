@@ -1,26 +1,6 @@
 {
   "name": "kongming-jimeng",
   "version": "1.0.0",
-  "description": "孔明說新聞 - 二合一正式版（腳本＋即夢組圖＋影片整合＋剪映入口）",
-  "main": "index.js",
-  "scripts": {
-    "start": "vercel dev"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Adara1440/kongming-Jimeng.git"
-  },
-  "keywords": [
-    "OpenAI",
-    "即夢",
-    "孔明說新聞",
-    "Vercel",
-    "GPT"
-  ],
-  "author": "Adara1440",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Adara1440/kongming-Jimeng/issues"
-  },
-  "homepage": "https://github.com/Adara1440/kongming-Jimeng#readme"
+  "description": "孔明說新聞 - AI影片生成工具",
+  "private": true
 }
