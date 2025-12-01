@@ -160,6 +160,21 @@ async function callOpenAI(apiKey, prompt) {
 
 module.exports = async function handler(req, res) {
   try {
+    // --- 🔒 1. 密碼驗證邏輯 (新增) ---
+    // 從 Header 讀取密碼
+    const userPassword = req.headers['x-access-password'];
+    // 從環境變數讀取正確密碼 (請在 Vercel 設定 ACCESS_PASSWORD)
+    const correctPassword = process.env.ACCESS_PASSWORD;
+
+    // 如果環境變數有設密碼，就強制檢查
+    if (correctPassword && userPassword !== correctPassword) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "密碼錯誤 (Unauthorized)。請重新整理網頁輸入正確密碼。" 
+      });
+    }
+
+    // --- 2. 檢查請求方法 ---
     // 檢查是否為 refine 請求
     const isRefineRequest = req.query.type === 'refine';
     
@@ -171,7 +186,7 @@ module.exports = async function handler(req, res) {
     if (!apiKey) {
       console.error("OPENAI_API_KEY missing");
       return res.status(500).json({ 
-        success: false,
+        success: false, 
         error: "Missing OPENAI_API_KEY" 
       });
     }
@@ -236,7 +251,7 @@ module.exports = async function handler(req, res) {
 
     if (!newsContent || newsContent.trim() === "") {
       return res.status(400).json({ 
-        success: false,
+        success: false, 
         error: "News content is required" 
       });
     }
@@ -300,7 +315,7 @@ module.exports = async function handler(req, res) {
       const prompt = PROMPTS[requestType];
       if (!prompt) {
         return res.status(400).json({ 
-          success: false,
+          success: false, 
           error: `Invalid type: ${requestType}` 
         });
       }
