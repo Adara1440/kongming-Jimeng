@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>孔明說新聞 - AI影片生成工具</title>
+  <title>孔明說新聞 - AI影片生成工具 (Secure)</title>
   <style>
     body {
       font-family: "Noto Sans TC", sans-serif;
@@ -447,7 +447,24 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    /* --- 以下是所有既有的 JavaScript 邏輯 (完全不變) --- */
+    // --- 🔐 安全性功能：取得密碼 (新增) ---
+    function getPassword() {
+        let pwd = localStorage.getItem('site_password');
+        if (!pwd) {
+            pwd = prompt("🔐 請輸入訪問密碼 (Password)：");
+            if (pwd) {
+                localStorage.setItem('site_password', pwd);
+            } else {
+                alert("⚠️ 未輸入密碼，功能將無法使用！");
+            }
+        }
+        return pwd || '';
+    }
+
+    // 🔥 網頁載入後立即執行密碼詢問
+    window.onload = function() {
+        getPassword();
+    };
 
     function showToast(message, duration = 2500) {
       const toast = document.getElementById("toast");
@@ -527,9 +544,13 @@
       sceneBox.className = 'result-box loading';
 
       try {
+        // 🔹 增加 Headers 密碼
         const res = await fetch('/api/gemini?type=refine', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Access-Password': getPassword()
+          },
           body: JSON.stringify({
             currentScenes: currentScenes,
             userRequest: adjustment,
@@ -538,6 +559,12 @@
             regenerateVideo: regenerateVideo
           })
         });
+
+        if (res.status === 401) {
+            alert('⛔ 密碼錯誤！請重新整理並輸入正確密碼。');
+            localStorage.removeItem('site_password');
+            throw new Error("Unauthorized");
+        }
 
         if (!res.ok) {
           const errorData = await res.json();
@@ -568,7 +595,7 @@
         console.error('優化錯誤:', error);
         sceneBox.textContent = `❌ 優化失敗：${error.message}`;
         sceneBox.className = 'result-box error';
-        alert(`優化失敗：${error.message}`);
+        if (error.message !== "Unauthorized") alert(`優化失敗：${error.message}`);
       }
     }
 
@@ -587,15 +614,25 @@
       }
       
       try {
+        // 🔹 增加 Headers 密碼
         const res = await fetch('/api/gemini?type=video', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Access-Password': getPassword()
+          },
           body: JSON.stringify({
             news: news,
             currentScenes: scenes
           })
         });
         
+        if (res.status === 401) {
+            alert('⛔ 密碼錯誤！請重新整理並輸入正確密碼。');
+            localStorage.removeItem('site_password');
+            throw new Error("Unauthorized");
+        }
+
         if (!res.ok) {
           const errorData = await res.json();
           throw new Error(errorData.error || 'HTTP error');
@@ -614,7 +651,7 @@
         for (let i = 1; i <= 4; i++) {
           document.getElementById(`video${i}`).textContent = "❌ 生成失敗";
         }
-        alert('視頻運鏡生成失敗：' + error.message);
+        if (error.message !== "Unauthorized") alert('視頻運鏡生成失敗：' + error.message);
       }
     }
 
@@ -626,11 +663,21 @@
       }
 
       try {
+        // 🔹 增加 Headers 密碼
         const res = await fetch(`/api/gemini?type=${type}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "X-Access-Password": getPassword()
+          },
           body: JSON.stringify({ news })
         });
+
+        if (res.status === 401) {
+            alert('⛔ 密碼錯誤！請重新整理並輸入正確密碼。');
+            localStorage.removeItem('site_password');
+            throw new Error("Unauthorized");
+        }
 
         if (!res.ok) {
           const errorData = await res.json();
@@ -645,7 +692,7 @@
         return data.result;
       } catch (error) {
         console.error("API 錯誤:", error);
-        alert(`生成失敗：${error.message}`);
+        if (error.message !== "Unauthorized") alert(`生成失敗：${error.message}`);
         return null;
       }
     }
@@ -674,14 +721,24 @@
       generateBtn.disabled = true;
 
       try {
+        // 🔹 增加 Headers 密碼
         const res = await fetch("/api/gemini?type=all", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "X-Access-Password": getPassword()
+          },
           body: JSON.stringify({ 
             news: news,
             hasNewsImage: hasImage 
           })
         });
+
+        if (res.status === 401) {
+            alert('⛔ 密碼錯誤！請重新整理並輸入正確密碼。');
+            localStorage.removeItem('site_password');
+            throw new Error("Unauthorized");
+        }
 
         if (!res.ok) {
           const errorData = await res.json();
@@ -709,7 +766,7 @@
         scriptBox.value = `❌ 生成失敗：${error.message}`;
         sceneBox.textContent = `❌ 生成失敗：${error.message}`;
         sceneBox.className = "result-box error";
-        alert(`生成失敗：${error.message}`);
+        if (error.message !== "Unauthorized") alert(`生成失敗：${error.message}`);
       } finally {
         generateBtn.disabled = false;
       }
@@ -743,14 +800,24 @@
       }
 
       try {
+        // 🔹 增加 Headers 密碼
         const res = await fetch("/api/gemini?type=scene", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "X-Access-Password": getPassword()
+          },
           body: JSON.stringify({ 
             news: news,
             hasNewsImage: hasImage 
           })
         });
+
+        if (res.status === 401) {
+            alert('⛔ 密碼錯誤！請重新整理並輸入正確密碼。');
+            localStorage.removeItem('site_password');
+            throw new Error("Unauthorized");
+        }
 
         if (!res.ok) {
           const errorData = await res.json();
